@@ -8,5 +8,6 @@ data class TimetableEntry(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val dayOfWeek: Int,
     val hour: Int,
-    val label: String
+    val label: String,
+    val colorHex: String = "#D0F0C0" // Couleur par défaut
 )

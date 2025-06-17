@@ -1,7 +1,6 @@
 package com.campusconnect.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -10,97 +9,61 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.campusconnect.data.model.TimetableEntry
+import com.campusconnect.ui.components.TimetableDialog
 import com.campusconnect.viewmodel.TimetableViewModel
 
 @Composable
-fun CalendarScreen(viewModel: TimetableViewModel = viewModel()) {
-    val days = listOf("Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi")
+fun CalendarScreen(viewModel: TimetableViewModel) {
+    val entries by viewModel.entries.collectAsState()
+    val days = listOf("Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam")
     val hours = (8..18).toList()
 
-    val entries by viewModel.entries.collectAsState(initial = emptyList())
-
     var editingEntry by remember { mutableStateOf<TimetableEntry?>(null) }
-    var subjectInput by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.padding(8.dp)) {
+    Column {
         Row {
-            Spacer(modifier = Modifier.width(60.dp)) // Pour les heures
+            Spacer(modifier = Modifier.width(48.dp))
             days.forEach {
-                Text(
-                    text = it,
-                    modifier = Modifier.weight(1f).padding(4.dp),
-                    style = MaterialTheme.typography.labelMedium
-                )
+                Text(text = it, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium)
             }
         }
 
         hours.forEach { hour ->
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "$hour h",
-                    modifier = Modifier.width(60.dp).padding(4.dp),
-                    style = MaterialTheme.typography.labelSmall
-                )
-                for (dayIndex in 0 until 6) {
-                    val entry = entries.find { it.dayOfWeek == dayIndex && it.hour == hour }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("$hour h", modifier = Modifier.width(48.dp))
+                for (day in 0..6) {
+                    val entry = entries.find { it.dayOfWeek == day && it.hour == hour }
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(50.dp)
-                            .border(0.5.dp, Color.Gray)
+                            .height(48.dp)
+                            .padding(2.dp)
+                            .background(Color(android.graphics.Color.parseColor(entry?.colorHex ?: "#FFFFFF")))
                             .clickable {
-                                editingEntry = entry ?: TimetableEntry(dayOfWeek = dayIndex, hour = hour, label = "")
-                                subjectInput = editingEntry?.label ?: ""
-                            }
-                            .background(if (entry != null) Color(0xFFB3E5FC) else Color.White),
+                                editingEntry = entry ?: TimetableEntry(dayOfWeek = day, hour = hour, label = "")
+                            },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(entry?.label ?: "")
+                        Text(text = entry?.label ?: "")
                     }
                 }
             }
         }
     }
 
-    editingEntry?.let { entry ->
-        AlertDialog(
-            onDismissRequest = { editingEntry = null },
-            title = { Text("Modifier le cours") },
-            text = {
-                Column {
-                    Text("Jour: ${days[entry.dayOfWeek]}, Heure: ${entry.hour}h")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = subjectInput,
-                        onValueChange = { subjectInput = it },
-                        label = { Text("Nom du cours (CM/TD/TP)") }
-                    )
-                }
+    editingEntry?.let {
+        TimetableDialog(
+            entry = it,
+            onSave = {
+                viewModel.addOrUpdate(it)
+                editingEntry = null
             },
-            confirmButton = {
-                Button(onClick = {
-                    viewModel.insert(entry.copy(label = subjectInput))
-                    editingEntry = null
-                }) {
-                    Text("Enregistrer")
-                }
+            onDelete = {
+                viewModel.delete(it)
+                editingEntry = null
             },
-            dismissButton = {
-                if (entry.label.isNotBlank()) {
-                    OutlinedButton(onClick = {
-                        viewModel.delete(entry)
-                        editingEntry = null
-                    }) {
-                        Text("Supprimer")
-                    }
-                } else {
-                    TextButton(onClick = { editingEntry = null }) {
-                        Text("Annuler")
-                    }
-                }
-            }
+            onDismiss = { editingEntry = null }
         )
     }
 }

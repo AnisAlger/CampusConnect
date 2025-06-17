@@ -10,10 +10,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class TimetableViewModel(private val repository: TimetableRepository) : ViewModel() {
+
     val entries: StateFlow<List<TimetableEntry>> = repository.getAll()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
-    fun insert(entry: TimetableEntry) {
+    fun addOrUpdate(entry: TimetableEntry) {
         viewModelScope.launch {
             repository.insert(entry)
         }

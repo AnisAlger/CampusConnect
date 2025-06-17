@@ -4,51 +4,54 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import com.campusconnect.data.model.TimetableEntry
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.TextFieldValue
 
 @Composable
 fun TimetableDialog(
-    item: TimetableEntry,
+    entry: TimetableEntry,
     onSave: (TimetableEntry) -> Unit,
     onDelete: (TimetableEntry) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var label by remember { mutableStateOf(item.label) }
+    var label by remember { mutableStateOf(TextFieldValue(entry.label)) }
+    var color by remember { mutableStateOf(Color(android.graphics.Color.parseColor(entry.colorHex))) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            Row {
-                Button(onClick = {
-                    onSave(item.copy(label = label))
-                }) {
-                    Text("Enregistrer")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                if (item.label.isNotBlank()) {
-                    OutlinedButton(onClick = { onDelete(item) }) {
-                        Text("Supprimer")
-                    }
-                }
+            Button(onClick = {
+                onSave(entry.copy(label = label.text, colorHex = "#%06X".format(0xFFFFFF and color.toArgb())))
+            }) {
+                Text("Enregistrer")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Annuler")
+            Row {
+                if (entry.label.isNotBlank()) {
+                    OutlinedButton(onClick = { onDelete(entry) }) {
+                        Text("Supprimer")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                TextButton(onClick = onDismiss) {
+                    Text("Annuler")
+                }
             }
         },
-        title = { Text("Modifier le cours") },
+        title = { Text("Cours à ${entry.hour}h - Jour ${entry.dayOfWeek}") },
         text = {
             Column {
-                Text("Jour: ${item.dayOfWeek} - Heure: ${item.hour}h")
-                Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Nom du cours") },
-                    singleLine = true
+                    label = { Text("Nom du cours") }
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                ColorPicker(selectedColor = color, onColorSelected = { color = it })
             }
         }
     )
