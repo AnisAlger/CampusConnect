@@ -12,8 +12,12 @@ data class Task(
     val subjectId: Int, // Relation avec Subject
     val dueDate: Long, // Timestamp
     val isDone: Boolean = false,
-    val priority: TaskPriority = TaskPriority.MEDIUM
+    val priority: TaskPriority = TaskPriority.MEDIUM,
+    val notify: Boolean = true,
+    val reminderMinutes: Int = 15 // <<< ADD THIS LINE (or your preferred default)
 )
+
+
 
 enum class TaskPriority {
     LOW, MEDIUM, HIGH

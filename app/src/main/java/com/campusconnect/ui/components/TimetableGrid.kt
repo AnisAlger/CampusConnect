@@ -40,7 +40,7 @@ fun TimetableGrid(
                 )
 
                 for (day in 0..5) {
-                    val entry = entries.find { it.dayOfWeek == day && it.hour == hour }
+                    val entry = entries.find { it.dayOfWeek == day && it.startHour == hour }
                     Box(
                         modifier = Modifier
                             .weight(1f)

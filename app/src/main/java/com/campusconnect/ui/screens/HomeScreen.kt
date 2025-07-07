@@ -14,22 +14,13 @@ import com.campusconnect.ui.components.* // Make sure StatCard, EventItem, Subje
 import com.campusconnect.viewmodel.TaskViewModel
 import com.campusconnect.viewmodel.EventViewModel
 // Import your data models if needed for lambdas, e.g., for task.id
-import com.campusconnect.data.model.Event
-import com.campusconnect.data.model.Task
 
 @Composable
 fun HomeScreen(
-
     eventViewModel: EventViewModel = viewModel(),
     taskViewModel: TaskViewModel = viewModel()
 ) {
-
-    // CRITICAL: Ensure 'EventViewModel' has a public StateFlow named 'events' or 'upcomingEvents'.
-    // If it's named 'upcomingEvents' in your EventViewModel, then this line is correct:
-    // val events = eventViewModel.upcomingEvents.collectAsState(initial = emptyList())
-    // If it's named 'events', use this:
-    val events = eventViewModel.events.collectAsState() // Using '.events' as a common convention
-
+    val events = eventViewModel.events.collectAsState()
     val tasks = taskViewModel.tasks.collectAsState()
 
     Column(
@@ -47,24 +38,28 @@ fun HomeScreen(
                 .horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-
+            // TODO: Add SubjectChip items here if you have a list of subjects
+            // Example:
+            // val subjects = listOf("Maths", "Physique", "Info")
+            // subjects.forEach { subjectName ->
+            //    SubjectChip(name = subjectName, onClick = { /* TODO */ })
+            // }
         }
 
-        SectionTitle("À venir")
+        SectionTitle("Événements")
         if (events.value.isNotEmpty()) {
             events.value
                 .sortedBy { it.startTime } // Assuming 'Event' has 'startTime'
-                .take(1)
+                .take(1) // Display only the next upcoming event
                 .forEach { event ->
                     EventItem(
                         event = event,
                         onClick = {
-                            // TODO: Implement event click action (e.g., navigation)
+                            // TODO: Implement event click action (e.g., navigation to event details)
                             println("Event clicked: ${event.title}")
                         },
                         onDelete = {
-                            // TODO: Implement event deletion (e.g., call eventViewModel.deleteEvent(event.id))
-                            println("Delete event: ${event.title}")
+                            eventViewModel.deleteEvent(event) // Assuming you have a deleteEvent function in EventViewModel
                         }
                     )
                 }
@@ -75,19 +70,26 @@ fun HomeScreen(
         SectionTitle("Tâches prioritaires")
         if (tasks.value.isNotEmpty()) {
             tasks.value
-                .filter { !it.isDone }
+                .filter { !it.isDone } // Show only incomplete tasks
                 .sortedByDescending { it.priority } // Assuming 'Task' has 'priority'
-                .take(1)
+                .take(1) // Display only the highest priority task
                 .forEach { task ->
                     TaskItem(
                         task = task,
                         onToggleDone = {
-                            // TODO: Implement task toggle (e.g., taskViewModel.updateTask(task.copy(isDone = !task.isDone)))
+                            // TODO: Implement task toggle
+                            // Make sure your TaskViewModel has an updateTask or toggleTaskDone function
+                            // val updatedTask = task.copy(isDone = !task.isDone)
+                            // taskViewModel.updateTask(updatedTask)
                             println("Task toggled: ${task.title}, New status: ${!task.isDone}")
                         },
                         onClick = {
-                            // TODO: Implement task click action (e.g., navigation)
+                            // TODO: Implement task click action (e.g., navigation to task details or edit)
                             println("Task clicked: ${task.title}")
+                        },
+                        // CORRECTION APPLIQUÉE ICI :
+                        onDelete = {
+                            taskViewModel.delete(task)
                         }
                     )
                 }
@@ -98,12 +100,25 @@ fun HomeScreen(
         SectionTitle("Statistiques rapides")
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            StatCard(title = "Heures", value = "5h") // TODO: Replace with dynamic data
-            StatCard(title = "Tâches", value = tasks.value.count { !it.isDone }.toString())
-
+            StatCard(
+                title = "Emplois",
+                value = events.value.size.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Événements",
+                value = events.value.size.toString(),
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Tâches",
+                value = tasks.value.count { !it.isDone }.toString(),
+                modifier = Modifier.weight(1f)
+            )
         }
+
     }
 }
 
@@ -112,6 +127,6 @@ fun SectionTitle(title: String) {
     Text(
         text = title,
         style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
-        modifier = Modifier.padding(top = 8.dp)
+        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp) // Added bottom padding for spacing
     )
 }

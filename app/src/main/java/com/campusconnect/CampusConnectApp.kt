@@ -1,5 +1,6 @@
 package com.campusconnect
 
+import android.app.Application
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -17,18 +18,19 @@ fun CampusConnectApp() {
     CampusConnectTheme {
         val navController = rememberNavController()
 
-        // Initialisation du contexte et de la base de données
         val context = LocalContext.current.applicationContext
         val database = CampusDatabase.getDatabase(context)
 
-        // Création des Repositorys
         val taskRepo = TaskRepository(database.taskDao())
         val eventRepo = EventRepository(database.eventDao())
         val timetableRepo = TimetableRepository(database.timetableDao())
 
-        // Création des ViewModels
-        val taskViewModel = remember { TaskViewModel(taskRepo) }
-        val eventViewModel = remember { EventViewModel(eventRepo) }
+        val taskViewModel = remember {
+            TaskViewModel(application = context as Application, repository = taskRepo)
+        }
+
+        val eventViewModel = remember {
+            EventViewModel(eventRepo) }
         val timetableViewModel = remember { TimetableViewModel(timetableRepo) }
 
         Scaffold(
@@ -48,13 +50,14 @@ fun CampusConnectApp() {
                     )
                 }
                 composable("tasks") {
-                    TasksScreen()
+                    TasksScreen(taskViewModel = taskViewModel)
+                    // ✅ CORRECTION ICI
                 }
                 composable("events") {
-                    EventsScreen()
+                    EventsScreen(eventViewModel = eventViewModel)
                 }
                 composable("calendar") {
-                    CalendarScreen(viewModel = timetableViewModel) // ✅ viewModel passé à l'écran calendrier
+                    CalendarScreen(viewModel = timetableViewModel)
                 }
             }
         }

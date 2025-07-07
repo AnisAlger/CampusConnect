@@ -7,7 +7,8 @@ import androidx.room.PrimaryKey
 data class TimetableEntry(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val dayOfWeek: Int,
-    val hour: Int,
+    val startHour: Int, // e.g., 8, 9, 14
+    val timeSlot: String, // ex: "08:00 - 09:30" (can still keep this for display)
     val label: String,
-    val colorHex: String = "#D0F0C0" // Couleur par défaut
+    val colorHex: String = "#D0F0C0"
 )

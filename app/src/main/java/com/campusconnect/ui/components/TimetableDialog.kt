@@ -4,11 +4,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.campusconnect.data.model.TimetableEntry
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.TextFieldValue
 
 @Composable
 fun TimetableDialog(
@@ -22,6 +22,18 @@ fun TimetableDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        title = { Text("Modifier le cours") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = label,
+                    onValueChange = { label = it },
+                    label = { Text("Nom du cours") }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                ColorPicker(selectedColor = color, onColorSelected = { color = it })
+            }
+        },
         confirmButton = {
             Button(onClick = {
                 onSave(entry.copy(label = label.text, colorHex = "#%06X".format(0xFFFFFF and color.toArgb())))
@@ -40,18 +52,6 @@ fun TimetableDialog(
                 TextButton(onClick = onDismiss) {
                     Text("Annuler")
                 }
-            }
-        },
-        title = { Text("Cours à ${entry.hour}h - Jour ${entry.dayOfWeek}") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = label,
-                    onValueChange = { label = it },
-                    label = { Text("Nom du cours") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                ColorPicker(selectedColor = color, onColorSelected = { color = it })
             }
         }
     )

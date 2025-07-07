@@ -8,7 +8,7 @@ import com.campusconnect.data.model.*
 
 @Database(
     entities = [Task::class, Event::class, TimetableEntry::class], // Ajout de TimetableEntry
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class CampusDatabase : RoomDatabase() {
