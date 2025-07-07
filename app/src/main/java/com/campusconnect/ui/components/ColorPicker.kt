@@ -12,7 +12,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ColorPicker(
     selectedColor: Color,
-    onColorSelected: (Color) -> Unit
+    onColorSelected: (Color) -> Unit,
+    modifier: Modifier
 ) {
     val colors = listOf(
         Color(0xFFE57373), Color(0xFFF06292), Color(0xFFBA68C8),
@@ -20,7 +21,7 @@ fun ColorPicker(
         Color(0xFFFFD54F), Color(0xFFA1887F), Color(0xFF90A4AE)
     )
 
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(modifier, horizontalArrangement = Arrangement.SpaceBetween) {
         colors.forEach { color ->
             Box(
                 modifier = Modifier

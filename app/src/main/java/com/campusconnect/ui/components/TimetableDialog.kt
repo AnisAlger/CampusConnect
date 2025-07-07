@@ -31,8 +31,11 @@ fun TimetableDialog(
                     label = { Text("Nom du cours") }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                ColorPicker(selectedColor = color, onColorSelected = { color = it })
-            }
+                ColorPicker(
+                    selectedColor = color,
+                    onColorSelected = { color = it },
+                    modifier = Modifier // You can chain any modifier functions here e.g. Modifier.fillMaxWidth()
+                )            }
         },
         confirmButton = {
             Button(onClick = {
