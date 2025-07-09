@@ -19,27 +19,55 @@ fun TimetableDialog(
 ) {
     var label by remember { mutableStateOf(TextFieldValue(entry.label)) }
     var color by remember { mutableStateOf(Color(android.graphics.Color.parseColor(entry.colorHex))) }
+    var selectedType by remember { mutableStateOf(entry.type) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Modifier le cours") },
         text = {
             Column {
+                // Sélection du type (Cours/TD/TP)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    listOf("Cours", "TD", "TP").forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = { Text(type) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Nom du cours
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Nom du cours") }
+                    label = { Text("Nom") },
+                    modifier = Modifier.fillMaxWidth()
                 )
+
                 Spacer(modifier = Modifier.height(8.dp))
+
+                // Sélecteur de couleur
                 ColorPicker(
                     selectedColor = color,
                     onColorSelected = { color = it },
-                    modifier = Modifier // You can chain any modifier functions here e.g. Modifier.fillMaxWidth()
-                )            }
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         },
         confirmButton = {
             Button(onClick = {
-                onSave(entry.copy(label = label.text, colorHex = "#%06X".format(0xFFFFFF and color.toArgb())))
+                onSave(entry.copy(
+                    label = label.text,
+                    type = selectedType,
+                    colorHex = "#%06X".format(0xFFFFFF and color.toArgb())
+                ))
             }) {
                 Text("Enregistrer")
             }

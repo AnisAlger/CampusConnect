@@ -1,44 +1,124 @@
 package com.campusconnect
 
+
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
     val items = listOf(
-        NavItem("Accueil", "home", Icons.Default.Home), // ✅ Ajout de Home
-        NavItem("Tâches", "tasks", Icons.Default.List),
-        NavItem("Événements", "events", Icons.Default.DateRange),
-        NavItem("Calendrier", "calendar", Icons.Default.CalendarToday),
+        NavItem("Accueil", "home", Icons.Filled.Home),
+        NavItem("Tâches", "tasks", Icons.Filled.Checklist),
+        NavItem("Événements", "events", Icons.Filled.Event),
+        NavItem("Calendrier", "calendar", Icons.Filled.CalendarMonth),
     )
 
-    NavigationBar {
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 8.dp,
+        modifier = Modifier
+            .height(80.dp)
+            .padding(horizontal = 8.dp)
+    ) {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
 
         items.forEach { item ->
             NavigationBarItem(
                 selected = currentRoute == item.route,
-                onClick = {
-                    if (currentRoute != item.route) {
-                        navController.navigate(item.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
+                onClick = { handleNavigation(navController, item.route, currentRoute) },
+                icon = {
+                    AnimatedNavIcon(
+                        icon = item.icon,
+                        selected = currentRoute == item.route,
+                        label = item.label
+                    )
                 },
-                icon = { Icon(item.icon, contentDescription = item.label) },
-                label = { Text(item.label) }
+                label = {
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    indicatorColor = MaterialTheme.colorScheme.secondaryContainer
+                ),
+                alwaysShowLabel = true
             )
+        }
+    }
+}
+
+@Composable
+private fun AnimatedNavIcon(
+    icon: ImageVector,
+    selected: Boolean,
+    label: String
+) {
+    val animationProgress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0.7f,
+        animationSpec = tween(300)
+    )
+
+    Box(contentAlignment = Alignment.Center) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            modifier = Modifier.size(26.dp),
+            tint = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = animationProgress)
+            }
+        )
+
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(0.6f)
+                    .height(3.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(50)
+                    )
+            )
+        }
+    }
+}
+
+private fun handleNavigation(
+    navController: NavHostController,
+    targetRoute: String,
+    currentRoute: String?
+) {
+    if (currentRoute != targetRoute) {
+        navController.navigate(targetRoute) {
+            popUpTo(navController.graph.startDestinationId) {
+                saveState = true
+            }
+            launchSingleTop = true
+            restoreState = true
         }
     }
 }

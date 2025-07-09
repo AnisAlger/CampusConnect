@@ -10,5 +10,6 @@ data class TimetableEntry(
     val startHour: Int, // e.g., 8, 9, 14
     val timeSlot: String, // ex: "08:00 - 09:30" (can still keep this for display)
     val label: String,
-    val colorHex: String = "#D0F0C0"
+    val colorHex: String = "#D0F0C0",
+    val type: String = "Cours/TD/TP"
 )

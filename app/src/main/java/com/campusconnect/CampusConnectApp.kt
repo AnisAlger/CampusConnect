@@ -29,8 +29,7 @@ fun CampusConnectApp() {
             TaskViewModel(application = context as Application, repository = taskRepo)
         }
 
-        val eventViewModel = remember {
-            EventViewModel(eventRepo) }
+        val eventViewModel = remember { EventViewModel(eventRepo) }
         val timetableViewModel = remember { TimetableViewModel(timetableRepo) }
 
         Scaffold(
@@ -46,12 +45,12 @@ fun CampusConnectApp() {
                 composable("home") {
                     HomeScreen(
                         taskViewModel = taskViewModel,
-                        eventViewModel = eventViewModel
+                        eventViewModel = eventViewModel,
+                        timetableViewModel = timetableViewModel
                     )
                 }
                 composable("tasks") {
                     TasksScreen(taskViewModel = taskViewModel)
-                    // ✅ CORRECTION ICI
                 }
                 composable("events") {
                     EventsScreen(eventViewModel = eventViewModel)

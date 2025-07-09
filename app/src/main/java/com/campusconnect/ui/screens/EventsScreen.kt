@@ -46,7 +46,8 @@ fun EventsScreen(eventViewModel: EventViewModel) {
                         onDelete = {
                             eventViewModel.deleteEvent(event)
                             Toast.makeText(context, "Événement supprimé", Toast.LENGTH_SHORT).show()
-                        }
+                        },
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }

@@ -8,7 +8,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.campusconnect.data.model.Task
 import com.campusconnect.viewmodel.TaskViewModel
 import com.campusconnect.ui.components.TaskItem
 import com.campusconnect.ui.components.TaskDialog
@@ -29,9 +28,10 @@ fun TasksScreen(taskViewModel: TaskViewModel) {
         tasks.forEach { task ->
             TaskItem(
                 task = task,
+                onToggleDone = { /* Gestion état terminé */ },
                 onDelete = { taskViewModel.delete(task) },
                 onClick = { /* Navigation ou édition */ },
-                onToggleDone = { /* Gestion état terminé */ }
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
         }
