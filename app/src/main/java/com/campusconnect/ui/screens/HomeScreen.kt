@@ -3,6 +3,7 @@ package com.campusconnect.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -40,7 +41,8 @@ fun HomeScreen(
     timetableViewModel: TimetableViewModel = viewModel(),
     onNavigateToTasks: () -> Unit = {},
     onNavigateToEvents: () -> Unit = {},
-    onNavigateToCalendar: () -> Unit = {}
+    onNavigateToCalendar: () -> Unit = {},
+    onNavigateToBot: () -> Unit = {}
 ) {
     val events by eventViewModel.events.collectAsState()
     val tasks by taskViewModel.tasks.collectAsState()

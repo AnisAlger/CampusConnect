@@ -9,10 +9,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.Event
@@ -40,8 +42,9 @@ fun BottomNavigationBar(
     val items = listOf(
         NavItem("Accueil", "home", Icons.Filled.Home, Icons.Outlined.Home),
         NavItem("Tâches", "tasks", Icons.Filled.Checklist, Icons.Outlined.Checklist),
+        NavItem("CampusBot", "campusbot", Icons.Filled.AutoAwesome, Icons.Outlined.AutoAwesome),
         NavItem("Événements", "events", Icons.Filled.Event, Icons.Outlined.Event),
-        NavItem("Emploi du temps", "calendar", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
+        NavItem("Planning", "calendar", Icons.Filled.CalendarMonth, Icons.Outlined.CalendarMonth),
     )
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
