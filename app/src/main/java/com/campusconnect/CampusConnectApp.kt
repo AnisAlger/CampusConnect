@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -21,20 +23,25 @@ fun CampusConnectApp() {
         val context = LocalContext.current.applicationContext
         val database = CampusDatabase.getDatabase(context)
 
-        val taskRepo = TaskRepository(database.taskDao())
-        val eventRepo = EventRepository(database.eventDao())
-        val timetableRepo = TimetableRepository(database.timetableDao())
+        val taskRepo = remember { TaskRepository(database.taskDao()) }
+        val eventRepo = remember { EventRepository(database.eventDao()) }
+        val timetableRepo = remember { TimetableRepository(database.timetableDao()) }
 
         val taskViewModel = remember {
             TaskViewModel(application = context as Application, repository = taskRepo)
         }
-
         val eventViewModel = remember { EventViewModel(eventRepo) }
         val timetableViewModel = remember { TimetableViewModel(timetableRepo) }
 
+        val tasks by taskViewModel.tasks.collectAsState()
+        val pendingCount = tasks.count { !it.isDone }
+
         Scaffold(
             bottomBar = {
-                BottomNavigationBar(navController = navController)
+                BottomNavigationBar(
+                    navController = navController,
+                    pendingTaskCount = pendingCount
+                )
             }
         ) { innerPadding ->
             NavHost(
@@ -46,7 +53,10 @@ fun CampusConnectApp() {
                     HomeScreen(
                         taskViewModel = taskViewModel,
                         eventViewModel = eventViewModel,
-                        timetableViewModel = timetableViewModel
+                        timetableViewModel = timetableViewModel,
+                        onNavigateToTasks = { navController.navigate("tasks") },
+                        onNavigateToEvents = { navController.navigate("events") },
+                        onNavigateToCalendar = { navController.navigate("calendar") }
                     )
                 }
                 composable("tasks") {

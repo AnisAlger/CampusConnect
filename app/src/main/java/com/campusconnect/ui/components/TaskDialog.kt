@@ -1,17 +1,29 @@
 package com.campusconnect.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.campusconnect.data.model.Task
+import com.campusconnect.data.model.TaskPriority
+import com.campusconnect.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -24,24 +36,19 @@ fun TaskDialog(
     defaultReminderMinutes: Int = 15
 ) {
     val focusRequester = remember { FocusRequester() }
-    val context = LocalContext.current
 
     // States
     var title by remember { mutableStateOf(initialTask?.title ?: "") }
     var description by remember { mutableStateOf(initialTask?.description ?: "") }
+    var priority by remember { mutableStateOf(initialTask?.priority ?: TaskPriority.MEDIUM) }
     var reminderOffset by remember { mutableStateOf(initialTask?.reminderMinutes ?: defaultReminderMinutes) }
     var notify by remember { mutableStateOf(initialTask?.notify ?: true) }
     var isTitleError by remember { mutableStateOf(false) }
-    var isDateError by remember { mutableStateOf(false) }
 
-    // Calendar management - using derivedStateOf for better performance
+    // Calendar management
     val calendarState = remember {
         val cal = Calendar.getInstance()
-        cal.timeInMillis = initialTask?.dueDate ?: System.currentTimeMillis()
-        // Ensure minimum time is now + 1 minute
-        if (cal.timeInMillis <= System.currentTimeMillis()) {
-            cal.timeInMillis = System.currentTimeMillis() + 60_000
-        }
+        cal.timeInMillis = initialTask?.dueDate ?: (System.currentTimeMillis() + 3600000L) // Default +1 hour
         cal
     }
 
@@ -50,16 +57,18 @@ fun TaskDialog(
     var showTimePicker by remember { mutableStateOf(false) }
     var showReminderMenu by remember { mutableStateOf(false) }
 
-    // Formatters
     val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
     val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
+    var selectedDateText by remember { mutableStateOf(dateFormatter.format(calendarState.time)) }
+    var selectedTimeText by remember { mutableStateOf(timeFormatter.format(calendarState.time)) }
 
     // Date Picker State
     val datePickerState = rememberDatePickerState(
         initialSelectedDateMillis = calendarState.timeInMillis,
         yearRange = IntRange(
             Calendar.getInstance().get(Calendar.YEAR),
-            Calendar.getInstance().get(Calendar.YEAR) + 1
+            Calendar.getInstance().get(Calendar.YEAR) + 2
         )
     )
 
@@ -70,16 +79,28 @@ fun TaskDialog(
         is24Hour = true
     )
 
-    // Auto-focus title field when dialog opens
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        if (initialTask == null) {
+            focusRequester.requestFocus()
+        }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initialTask == null) "Nouvelle tâche" else "Modifier tâche") },
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Text(
+                text = if (initialTask == null) "Nouvelle tâche" else "Modifier la tâche",
+                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+            )
+        },
         text = {
-            Column(Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 // Title field
                 OutlinedTextField(
                     value = title,
@@ -87,105 +108,162 @@ fun TaskDialog(
                         title = it
                         isTitleError = false
                     },
-                    label = { Text("Titre*") },
+                    label = { Text("Titre de la tâche *") },
                     isError = isTitleError,
                     supportingText = {
-                        if (isTitleError) Text("Champ obligatoire")
+                        if (isTitleError) Text("Le titre est requis", color = MaterialTheme.colorScheme.error)
                     },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .focusRequester(focusRequester)
                 )
 
-                Spacer(Modifier.height(16.dp))
-
                 // Description field
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
-                    label = { Text("Description") },
+                    label = { Text("Description (optionnelle)") },
+                    maxLines = 3,
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(16.dp))
+                // Priority Selection
+                Column {
+                    Text(
+                        text = "Priorité",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            Triple(TaskPriority.LOW, "Basse", PriorityLowColor),
+                            Triple(TaskPriority.MEDIUM, "Moyenne", PriorityMediumColor),
+                            Triple(TaskPriority.HIGH, "Haute", PriorityHighColor)
+                        ).forEach { (p, label, color) ->
+                            val isSelected = priority == p
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { priority = p },
+                                label = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(color)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(label)
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
 
                 // Date and Time selection
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    // Date Picker
-                    Column(Modifier.weight(1f)) {
-                        Text("Date d'échéance", style = MaterialTheme.typography.labelMedium)
-                        Spacer(Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = dateFormatter.format(calendarState.time),
-                            onValueChange = {},
-                            readOnly = true,
-                            isError = isDateError,
-                            trailingIcon = {
-                                IconButton(onClick = { showDatePicker = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, null)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    // Time Picker
-                    Column(Modifier.weight(1f)) {
-                        Text("Heure d'échéance", style = MaterialTheme.typography.labelMedium)
-                        Spacer(Modifier.height(4.dp))
-                        OutlinedTextField(
-                            value = timeFormatter.format(calendarState.time),
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { showTimePicker = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, null)
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-
-                if (isDateError) {
+                Column {
                     Text(
-                        text = "La date doit être dans le futur",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(top = 4.dp)
+                        text = "Échéance",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Date Button
+                        OutlinedCard(
+                            onClick = { showDatePicker = true },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = selectedDateText,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, modifier = Modifier.size(18.dp))
+                            }
+                        }
 
-                Spacer(Modifier.height(16.dp))
+                        // Time Button
+                        OutlinedCard(
+                            onClick = { showTimePicker = true },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = selectedTimeText,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
 
                 // Notification toggle
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = "Activer un rappel",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium)
+                    )
                     Switch(
                         checked = notify,
                         onCheckedChange = { notify = it }
                     )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Activer les rappels")
                 }
 
                 // Reminder dropdown
                 if (notify) {
-                    Spacer(Modifier.height(16.dp))
-                    Text("Délai de rappel avant échéance:")
-                    Spacer(Modifier.height(8.dp))
-
                     Box(Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
-                            value = "$reminderOffset minutes",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                IconButton(onClick = { showReminderMenu = true }) {
-                                    Icon(Icons.Default.ArrowDropDown, null)
-                                }
-                            },
+                        OutlinedCard(
+                            onClick = { showReminderMenu = true },
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.fillMaxWidth()
-                        )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Rappeler $reminderOffset min avant",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            }
+                        }
 
                         DropdownMenu(
                             expanded = showReminderMenu,
@@ -193,7 +271,7 @@ fun TaskDialog(
                         ) {
                             listOf(5, 10, 15, 30, 60, 120).forEach { minutes ->
                                 DropdownMenuItem(
-                                    text = { Text("$minutes minutes") },
+                                    text = { Text("$minutes minutes avant") },
                                     onClick = {
                                         reminderOffset = minutes
                                         showReminderMenu = false
@@ -206,40 +284,38 @@ fun TaskDialog(
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
-                    // Validation
                     if (title.isBlank()) {
                         isTitleError = true
-                        return@TextButton
+                        return@Button
                     }
 
                     // Update time from picker
                     calendarState.apply {
-                        timeInMillis = datePickerState.selectedDateMillis ?: timeInMillis
+                        datePickerState.selectedDateMillis?.let {
+                            timeInMillis = it
+                        }
                         set(Calendar.HOUR_OF_DAY, timePickerState.hour)
                         set(Calendar.MINUTE, timePickerState.minute)
-                    }
-
-                    // Check if date is in future
-                    if (calendarState.timeInMillis <= System.currentTimeMillis()) {
-                        isDateError = true
-                        return@TextButton
                     }
 
                     onSave(
                         Task(
                             id = initialTask?.id ?: 0,
-                            title = title,
-                            description = description,
+                            title = title.trim(),
+                            description = description.trim().ifEmpty { null },
                             subjectId = initialTask?.subjectId ?: 0,
                             dueDate = calendarState.timeInMillis,
+                            isDone = initialTask?.isDone ?: false,
+                            priority = priority,
                             notify = notify,
-                            reminderMinutes = if (notify) reminderOffset else 0,
+                            reminderMinutes = if (notify) reminderOffset else 0
                         ),
                         if (notify) reminderOffset else 0
                     )
-                }
+                },
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text("Enregistrer")
             }
@@ -259,9 +335,10 @@ fun TaskDialog(
                 TextButton(
                     onClick = {
                         datePickerState.selectedDateMillis?.let {
-                            showDatePicker = false
-                            isDateError = false
+                            val temp = Calendar.getInstance().apply { timeInMillis = it }
+                            selectedDateText = dateFormatter.format(temp.time)
                         }
+                        showDatePicker = false
                     }
                 ) { Text("OK") }
             },
@@ -277,10 +354,19 @@ fun TaskDialog(
     if (showTimePicker) {
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
-            title = { Text("Sélectionner l'heure") },
+            title = { Text("Sélectionner l'heure", style = MaterialTheme.typography.titleMedium) },
             text = { TimePicker(state = timePickerState) },
             confirmButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("OK") }
+                TextButton(
+                    onClick = {
+                        val temp = Calendar.getInstance().apply {
+                            set(Calendar.HOUR_OF_DAY, timePickerState.hour)
+                            set(Calendar.MINUTE, timePickerState.minute)
+                        }
+                        selectedTimeText = timeFormatter.format(temp.time)
+                        showTimePicker = false
+                    }
+                ) { Text("OK") }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) { Text("Annuler") }

@@ -42,12 +42,22 @@ class TaskViewModel(
         }
     }
 
-    fun update(task: Task, reminderMinutes: Int) = viewModelScope.launch {
+    fun update(task: Task, reminderMinutes: Int = task.reminderMinutes) = viewModelScope.launch {
         repository.update(task)
-        if (task.notify) {
+        if (task.notify && !task.isDone) {
             scheduleReminder(task, reminderMinutes)
         } else {
             cancelReminder(task)
+        }
+    }
+
+    fun toggleDone(task: Task) = viewModelScope.launch {
+        val updated = task.copy(isDone = !task.isDone)
+        repository.update(updated)
+        if (updated.isDone) {
+            cancelReminder(task)
+        } else if (updated.notify) {
+            scheduleReminder(updated, updated.reminderMinutes)
         }
     }
 

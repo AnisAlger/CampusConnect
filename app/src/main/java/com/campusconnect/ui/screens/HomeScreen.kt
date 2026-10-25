@@ -1,314 +1,529 @@
 package com.campusconnect.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Task
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.campusconnect.data.model.TimetableEntry
 import com.campusconnect.ui.components.*
-import com.campusconnect.viewmodel.TaskViewModel
+import com.campusconnect.ui.theme.*
 import com.campusconnect.viewmodel.EventViewModel
+import com.campusconnect.viewmodel.TaskViewModel
 import com.campusconnect.viewmodel.TimetableViewModel
-import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
+import java.text.SimpleDateFormat
 import java.util.*
 
 @Composable
 fun HomeScreen(
-    eventViewModel: EventViewModel = viewModel(),
     taskViewModel: TaskViewModel = viewModel(),
-    timetableViewModel: TimetableViewModel = viewModel()
+    eventViewModel: EventViewModel = viewModel(),
+    timetableViewModel: TimetableViewModel = viewModel(),
+    onNavigateToTasks: () -> Unit = {},
+    onNavigateToEvents: () -> Unit = {},
+    onNavigateToCalendar: () -> Unit = {}
 ) {
-    val events = eventViewModel.events.collectAsState()
-    val tasks = taskViewModel.tasks.collectAsState()
-    val timetableEntries = timetableViewModel.entries.collectAsState()
+    val events by eventViewModel.events.collectAsState()
+    val tasks by taskViewModel.tasks.collectAsState()
+    val timetableEntries by timetableViewModel.entries.collectAsState()
 
-    // Get current day and hour
+    // Current Date / Time Info
     val calendar = Calendar.getInstance()
-    val currentDay = calendar.get(Calendar.DAY_OF_WEEK) - 1
+    val currentDay = calendar.get(Calendar.DAY_OF_WEEK) - 1 // 0=Dimanche, 1=Lundi ...
     val currentHour = calendar.get(Calendar.HOUR_OF_DAY)
 
-    // Find current/next course
-    val currentCourse = timetableEntries.value.firstOrNull {
-        it.dayOfWeek == currentDay && it.startHour >= currentHour
+    // Dynamic greeting based on time of day
+    val greeting = when (currentHour) {
+        in 5..11 -> "Bonjour ☀️"
+        in 12..17 -> "Bon après-midi 🌤️"
+        else -> "Bonsoir 🌙"
     }
-    val currentDayCoursesCount = timetableEntries.value.count { it.dayOfWeek == currentDay }
-    val EventCardColor = Color(0xFFE3F2FD)  // Bleu clair doux
-    val TaskCardColor = Color(0xFFE8F5E9)   // Vert clair doux
+
+    val dateHeaderFormat = remember { SimpleDateFormat("EEEE d MMMM", Locale.FRENCH) }
+    val formattedToday = remember {
+        val str = dateHeaderFormat.format(Date())
+        str.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.FRENCH) else it.toString() }
+    }
+
+    // Courses calculation
+    val todayCourses = timetableEntries
+        .filter { it.dayOfWeek == currentDay }
+        .sortedBy { it.startHour }
+
+    val nextCourse = todayCourses.firstOrNull { it.startHour >= currentHour } ?: todayCourses.firstOrNull()
+
+    // Tasks calculation
+    val pendingTasks = tasks.filter { !it.isDone }
+    val urgentTasks = pendingTasks
+        .sortedWith(compareByDescending<com.campusconnect.data.model.Task> { it.priority }.thenBy { it.dueDate })
+        .take(3)
+
+    // Events calculation
+    val upcomingEvents = events
+        .filter { it.endTime >= System.currentTimeMillis() }
+        .sortedBy { it.startTime }
+        .take(2)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = 18.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
-        // Nouveau header amélioré
+        // Hero Header with Greeting & Date
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .padding(top = 4.dp)
         ) {
             Column {
-                // Première ligne avec "Bienvenue sur"
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = greeting,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        )
+                        Text(
+                            text = formattedToday,
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+
+                    // Brand Pill
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "CampusConnect",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stats Row (3 interactive cards)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            StatCard(
+                title = "Cours ajd.",
+                value = todayCourses.size.toString(),
+                icon = Icons.Default.School,
+                accentColor = CourseGradientStart,
+                onClick = onNavigateToCalendar,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "À faire",
+                value = pendingTasks.size.toString(),
+                icon = Icons.Default.Checklist,
+                accentColor = TaskGradientStart,
+                onClick = onNavigateToTasks,
+                modifier = Modifier.weight(1f)
+            )
+            StatCard(
+                title = "Événements",
+                value = events.size.toString(),
+                icon = Icons.Default.Event,
+                accentColor = EventGradientStart,
+                onClick = onNavigateToEvents,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        // Prochain Cours Section
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "Bienvenue sur",
+                    text = "Prochain cours",
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 22.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                        fontWeight = FontWeight.Bold
                     ),
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-
-                // Deuxième ligne avec "CampusConnect" stylisé
-                Row(verticalAlignment = Alignment.Bottom) {
+                TextButton(onClick = onNavigateToCalendar) {
                     Text(
-                        text = "Campus",
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontSize = 36.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            shadow = Shadow(
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                                offset = Offset(2f, 3f),
-                                blurRadius = 8f
-                            )
-                        ),
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                    Text(
-                        text = "Connect",
-                        style = MaterialTheme.typography.displaySmall.copy(
-                            fontSize = 36.sp,
-                            color = MaterialTheme.colorScheme.secondary,
-                            shadow = Shadow(
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f),
-                                offset = Offset(2f, 3f),
-                                blurRadius = 8f
-                            )
-                        )
+                        text = "Emploi du temps →",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
                 }
-
-                // Ligne décorative
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(0.4f)
-                        .height(4.dp)
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary,
-                                    MaterialTheme.colorScheme.secondary
-                                )
-                            ),
-                            shape = RoundedCornerShape(2.dp)
-                        )
-                )
             }
-        }
 
-        // Section Prochain cours avec carte améliorée
-        SectionTitle("Votre prochain cours")
-        if (currentCourse != null) {
-            val dayNames = listOf("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi")
-            val dayName = dayNames.getOrElse(currentCourse.dayOfWeek) { "Aujourd'hui" }
+            Spacer(modifier = Modifier.height(8.dp))
 
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = Color(android.graphics.Color.parseColor(currentCourse.colorHex))
-                ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.School,
-                            contentDescription = "Cours",
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "${currentCourse.type} ${currentCourse.label}",
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = "Horaire",
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "$dayName • ${currentCourse.startHour}h - ${currentCourse.timeSlot}",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                    }
-                }
-            }
-        } else {
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Box(
+            if (nextCourse != null) {
+                CourseSpotlightCard(entry = nextCourse, onClick = onNavigateToCalendar)
+            } else {
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
+                        .clickable { onNavigateToCalendar() },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
                 ) {
-                    Text(
-                        text = "Aucun cours prévu aujourd'hui",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.School,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Aucun cours prévu aujourd'hui",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Profitez de votre journée ou préparez vos devoirs !",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
 
-        // Section Événements avec design amélioré
-        SectionTitle("Vos événements à venir")
-        if (events.value.isNotEmpty()) {
-            val nextEvent = events.value.sortedBy { it.startTime }.first()
-
-            ElevatedCard(
+        // Tâches Prioritaires Section
+        Column {
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = EventCardColor
-                ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                EventItem(
-                    event = nextEvent,
-                    onClick = { println("Event clicked: ${nextEvent.title}") },
-                    onDelete = { eventViewModel.deleteEvent(nextEvent) },
-                    modifier = Modifier.padding(16.dp)
+                Text(
+                    text = "Tâches prioritaires",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-            }
-        } else {
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.outlinedCardColors(
-                    containerColor = EventCardColor.copy(alpha = 0.3f)
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
+                TextButton(onClick = onNavigateToTasks) {
                     Text(
-                        text = "Aucun événement à venir",
-                        style = MaterialTheme.typography.bodyLarge
+                        text = "Voir tout (${pendingTasks.size}) →",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (urgentTasks.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    urgentTasks.forEach { task ->
+                        TaskItem(
+                            task = task,
+                            onToggleDone = { taskViewModel.toggleDone(task) },
+                            onDelete = { taskViewModel.delete(task) },
+                            onClick = onNavigateToTasks,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(PriorityLowColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircleOutline,
+                                contentDescription = null,
+                                tint = PriorityLowColor,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Toutes vos tâches sont accomplies !",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Aucune tâche urgente en attente.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Événements à Venir Section
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Événements à venir",
+                    style = MaterialTheme.typography.titleLarge.copy(
+                        fontWeight = FontWeight.Bold
+                    ),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                TextButton(onClick = onNavigateToEvents) {
+                    Text(
+                        text = "Voir tout (${events.size}) →",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (upcomingEvents.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    upcomingEvents.forEach { event ->
+                        EventItem(
+                            event = event,
+                            onClick = onNavigateToEvents,
+                            onDelete = { eventViewModel.deleteEvent(event) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EventAvailable,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Aucun événement planifié",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "Ajoutez vos examens, ateliers ou réunions associatives.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
-
-        // Section Tâches avec couleur personnalisée
-        SectionTitle("Vos tâches à faire")
-        if (tasks.value.isNotEmpty()) {
-            val topTask = tasks.value
-                .filter { !it.isDone }
-                .sortedByDescending { it.priority }
-                .first()
-
-            ElevatedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.elevatedCardColors(
-                    containerColor = TaskCardColor
-                ),
-                elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp)
-            ) {
-                TaskItem(
-                    task = topTask,
-                    onToggleDone = { println("Task toggled: ${topTask.title}") },
-                    onClick = { println("Task clicked: ${topTask.title}") },
-                    onDelete = { taskViewModel.delete(topTask) },
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
-        } else {
-            OutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.outlinedCardColors(
-                    containerColor = TaskCardColor.copy(alpha = 0.3f)
-                )
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Aucune tâche",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-            }
-        }
-
-        // Section Statistiques avec design amélioré
-        SectionTitle("Vos statistiques")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            StatCard(
-                title = "Cours aujourd'hui",
-                value = currentDayCoursesCount.toString(),
-                icon = Icons.Default.School,
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = "Événements",
-                value = events.value.size.toString(),
-                icon = Icons.Default.Event,
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = "Tâches",
-                value = tasks.value.count { !it.isDone }.toString(),
-                icon = Icons.Default.Task,
-                modifier = Modifier.weight(1f)
-            )
-        }
     }
 }
 
 @Composable
-fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleLarge.copy(
-            fontSize = 20.sp,
-            color = MaterialTheme.colorScheme.primary
+private fun CourseSpotlightCard(
+    entry: TimetableEntry,
+    onClick: () -> Unit
+) {
+    val dayNames = listOf("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi")
+    val dayName = dayNames.getOrElse(entry.dayOfWeek) { "Aujourd'hui" }
+
+    val courseColor = remember(entry.colorHex) {
+        try {
+            Color(android.graphics.Color.parseColor(entry.colorHex))
+        } catch (_: Exception) {
+            IndigoPrimaryLight
+        }
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Left color accent bar
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(courseColor)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Type pill (Cours, TD, TP)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = courseColor.copy(alpha = 0.16f)
+                    ) {
+                        Text(
+                            text = entry.type.uppercase(),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            ),
+                            color = courseColor,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+
+                    // Day badge
+                    Text(
+                        text = dayName,
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Course Label / Title
+                Text(
+                    text = entry.label.ifBlank { "Cours non spécifié" },
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Schedule Row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "${entry.startHour}h • ${entry.timeSlot}",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
 }
