@@ -13,7 +13,7 @@ class DataStoreManager(private val context: Context) {
 
     companion object {
         val DEFAULT_OPENROUTER_KEY: String = BuildConfig.OPENROUTER_API_KEY
-        const val DEFAULT_MODEL = "openai/gpt-3.5-turbo-16k"
+        const val DEFAULT_MODEL = "openai/gpt-4o-mini"
 
         val DARK_MODE = booleanPreferencesKey("dark_mode")
         val USER_NAME = stringPreferencesKey("user_name")

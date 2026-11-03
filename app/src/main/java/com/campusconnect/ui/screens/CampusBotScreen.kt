@@ -380,10 +380,10 @@ fun CampusBotScreenContent(
         var selectedModelLocal by remember { mutableStateOf(currentModel) }
 
         val availableModels = listOf(
-            "openai/gpt-3.5-turbo-16k" to "GPT-3.5 Turbo 16k (Recommandé)",
-            "openai/gpt-4o-mini" to "GPT-4o Mini (Ultra-rapide)",
-            "meta-llama/llama-3-8b-instruct:free" to "Llama 3 8B (Gratuit)",
-            "mistralai/mistral-7b-instruct:free" to "Mistral 7B (Gratuit)"
+            "openai/gpt-4o-mini" to "GPT-4o Mini (Recommandé & Économique)",
+            "openai/gpt-3.5-turbo-16k" to "GPT-3.5 Turbo 16k",
+            "google/gemma-4-26b-a4b-it:free" to "Google Gemma 4 (Gratuit)",
+            "nvidia/nemotron-3.5-lightning:free" to "NVIDIA Nemotron (Gratuit)"
         )
 
         AlertDialog(

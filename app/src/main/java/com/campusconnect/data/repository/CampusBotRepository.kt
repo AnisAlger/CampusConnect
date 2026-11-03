@@ -27,7 +27,7 @@ class CampusBotRepository {
         userPrompt: String,
         category: MessageCategory,
         apiKey: String,
-        modelName: String = "openai/gpt-3.5-turbo-16k"
+        modelName: String = "openai/gpt-4o-mini"
     ): String = withContext(Dispatchers.IO) {
         val effectiveApiKey = apiKey.trim().ifEmpty { DataStoreManager.DEFAULT_OPENROUTER_KEY }
 
@@ -58,6 +58,7 @@ class CampusBotRepository {
             // Build JSON payload
             val rootJson = JSONObject().apply {
                 put("model", modelName)
+                put("max_tokens", 1000)
 
                 val messagesArray = JSONArray().apply {
                     put(JSONObject().apply {
